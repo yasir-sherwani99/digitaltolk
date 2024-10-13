@@ -35,17 +35,15 @@ class BookingController extends Controller
      */
     public function index(Request $request)
     {
-        if($user_id = $request->get('user_id')) {
-
-            $response = $this->repository->getUsersJobs($user_id);
-
+        if ($user_id == $request->get('user_id')) {
+            return $this->handleUserJobs($userId);
         }
-        elseif($request->__authenticatedUser->user_type == env('ADMIN_ROLE_ID') || $request->__authenticatedUser->user_type == env('SUPERADMIN_ROLE_ID'))
-        {
-            $response = $this->repository->getAll($request);
+    
+        if ($this->isAdmin($request->__authenticatedUser)) {
+            return $this->handleAdminJobs($request);
         }
-
-        return response($response);
+    
+        return response()->json(['message' => 'Unauthorized'], 403);
     }
 
     /**
@@ -67,7 +65,7 @@ class BookingController extends Controller
     {
         $data = $request->all();
 
-        $response = $this->repository->store($request->__authenticatedUser, $data);
+        $response = $this->repository->store($request->__authenticatedUser, $request->all());
 
         return response($response);
 
@@ -289,6 +287,26 @@ class BookingController extends Controller
         } catch (\Exception $e) {
             return response(['success' => $e->getMessage()]);
         }
+    }
+
+    protected function handleUserJobs($userId)
+    {
+        $response = $this->repository->getUsersJobs($userId);
+        return response($response);
+    }
+
+    protected function handleAdminJobs(Request $request)
+    {
+        $response = $this->repository->getAll($request);
+        return response($response);
+    }
+
+    protected function isAdmin($user)
+    {
+        return in_array($user->user_type, [
+            env('ADMIN_ROLE_ID'), 
+            env('SUPERADMIN_ROLE_ID')
+        ]);
     }
 
 }
